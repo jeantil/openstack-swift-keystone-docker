@@ -6,7 +6,7 @@
 This container was created to enable *integration testing* against swift, it is
 therefore *NOT SECURE* AND SHOULD *NOT* BE USED IN *PRODUCTION*. 
 
-The container starts both a swift and a keystone service so taht integration
+The container starts both a swift and a keystone service so that integration
 tests can run against all 3 of swift authentication modes (swift's internal
 tempAuth, keystone Identity v2 API and keystone Identity v3 API) with a single
 container. 
@@ -42,38 +42,20 @@ Starting with openstack queens, the deprecated Identity v2 was removed. Since so
 
 I start the container using the following command: 
 
-    docker run -d --rm  -p 5000 -p 35357 -p 8080 --name keystone jeantil/openstack-keystone-swift:pike
+    docker run -d --rm  -p 5000 -p 35357 -p 8080 --env KS_SWIFT_PUBLIC_URL=http://127.0.0.1:8080 --name keystone jeantil/openstack-keystone-swift:pike
 
-By default the container keystone integration is not fully configured. The
-tempAuth works fine though.
+The KS_SWIFT_PUBLIC_URL needs to match the host port that container port 8080 is mapped to. Because keystone returns the endpoint url 
+in the authentication response, it has to know where the client expects to connect.
 
-To complete the keystone integration you must run the
-`/swift/bin/register-swift-endpoint.sh` script inside the container with the
-appropriate endpoint url provided. This is because keystone returns the endpoint
-url in the authentication response, it therefore has to know where the client
-expects to connect.
-
-If you only need to expose the port on the docker internal network you can use
-the follwing command: 
+If you need to customize the port that the swift endpoint is using, you must change the port mapping and the KS_SWIFT_PUBLIC_URL environment
+variable.
+For example, to run on host port 8089 you would use the following docker run command: 
 
 ```
-docker exec -it keystone /swift/bin/register-swift-endpoint.sh http://127.0.0.1:8080/
+docker run -d --rm  -p 5000 -p 35357 -p 8089:8080 --env KS_SWIFT_PUBLIC_URL=http://127.0.0.1:8089 --name keystone jeantil/openstack-keystone-swift:pike
 ```
-However if you need to access the container from the outside using the docker
-port mapping feature you will need to register against the port chosen by docker
-which can be found using docker ps. 
 
-For example given the following docker ps output: 
-```
-$ docker ps
-CONTAINER ID        IMAGE                                   COMMAND                  CREATED             STATUS              PORTS                                                                        NAMES
-40cd064477b5        jeantil/openstack-keystone-swift:pike   "/swift/bin/launch.sh"   15 minutes ago      Up 15 minutes       0.0.0.0:32920->5000/tcp, 0.0.0.0:32919->8080/tcp, 0.0.0.0:32918->35357/tcp   keystone
-```
-use 
-```
-docker exec -it keystone /swift/bin/register-swift-endpoint.sh http://127.0.0.1:32919/
-```
-to complete the keystone setup. Once this is done you can use one of the preconfigured credentials to authenticate against the container.
+Once this is done you can use one of the preconfigured credentials to authenticate against the container.
 
 For convenience, the following commands are available in the container : 
 
